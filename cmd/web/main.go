@@ -5,12 +5,14 @@ import (
 	"net/http"
 	"os"
 	"database/sql"
+	"alexedwards.net/snippetbox/pkg/models/mysql"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 type application struct {
 	errorLog *log.Logger
-	infoLog *log.Logger 
+	infoLog *log.Logger
+	snippets *mysql.SnippetModel
 }
 
 func main() {
