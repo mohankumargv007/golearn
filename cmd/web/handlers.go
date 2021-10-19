@@ -4,7 +4,16 @@ import (
 	"html/template"
 	"net/http"
 	"strconv"
+	"errors"
+	"alexedwards.net/snippetbox/pkg/models"
+	"log"
 )
+
+type application struct {
+	errorLog *log.Logger
+	infoLog *log.Logger
+	snippets *mysql.SnippetModel
+}
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -27,12 +36,23 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
+	print("oooo");
 	id, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil || id < 1 {
 		http.NotFound(w, r)
 		return
 	}
-	fmt.Fprintf(w, "Display a specific snippet with ID %d...", id)
+	s, err := app.snippets.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			app.notFound(w) 
+		} else {
+			app.serverError(w, err) 
+		}
+		return
+	}
+	// Write the snippet data as a plain-text HTTP response body.
+	fmt.Fprintf(w, "%v", s)
 }
 
 func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
