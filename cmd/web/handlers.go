@@ -1,12 +1,13 @@
 package main
 import ( 
 	"fmt"
-	"html/template"
+	//"html/template"
 	"net/http"
 	"strconv"
 	"errors"
 	"alexedwards.net/snippetbox/pkg/models"
 	"log"
+	"alexedwards.net/snippetbox/pkg/models/mysql"
 )
 
 type application struct {
@@ -20,9 +21,20 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 		app.notFound(w)
 		return
 	}
-	ts, err := template.ParseFiles("./ui/html/home.page.tmpl", "./ui/html/base.layout.tmpl", "./ui/html/footer.partial.tmpl")
 
+	s, err := app.snippets.Latest() 
 	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+		
+	for _, snippet := range s {
+		fmt.Fprintf(w, "%v\n", snippet)
+	}	
+
+	//ts, err := template.ParseFiles("./ui/html/home.page.tmpl", "./ui/html/base.layout.tmpl", "./ui/html/footer.partial.tmpl")
+
+	/* if err != nil {
 		app.errorLog.Println(err.Error())
 		app.serverError(w, err) 
 		return
@@ -32,11 +44,10 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		app.errorLog.Println(err.Error())
 		app.serverError(w, err)
-	}
+	} */
 }
 
 func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
-	print("oooo");
 	id, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil || id < 1 {
 		http.NotFound(w, r)
