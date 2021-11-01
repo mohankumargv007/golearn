@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	dsn := flag.String("dsn", "web:pass@/snippetbox?parseTime=true", "MySQL data source name") 
+	dsn := flag.String("dsn", "web:pass@/snippetbox?parseTime=true", "MySQL data source name")
 	addr := flag.String("addr", ":4000", "HTTP network address")
 	flag.Parse()
 	
@@ -23,6 +23,7 @@ func main() {
 	if err != nil {
 		errorLog.Fatal(err) 
 	}
+
 	//Close Connection
 	defer db.Close()
 	
@@ -31,8 +32,10 @@ func main() {
 		errorLog: errorLog,
 		infoLog: infoLog,
 		snippets: &mysql.SnippetModel{DB: db},
+		employees: &mysql.EmployeeModel{DB: db},
 	}
 	
+	//Routes
 	srv := &http.Server{ 
 		Addr: *addr,
 		ErrorLog: errorLog,

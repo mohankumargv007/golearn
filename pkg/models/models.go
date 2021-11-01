@@ -14,3 +14,12 @@ type Snippet struct {
 	Created time.Time
 	Expires time.Time
 }
+
+type Employee struct {
+	ID int
+	EmpID string
+	EmpName string
+	Role string
+	Created time.Time
+	Updated time.Time
+}

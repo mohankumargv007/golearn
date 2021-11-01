@@ -1,0 +1,7 @@
+mysql://localhost:3306/snippetbox?autoReconnect=true&useSSL=false
+
+migrateup:
+migrate -path db/migration -database "mysql://localhost:3306/snippetbox?autoReconnect=true&useSSL=false" -verbose up
+
+migrateup:
+migrate -path db/migration -database "mysql://web@pass:3306/snippetbox?autoReconnect=true&useSSL=false" -verbose up
