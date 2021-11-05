@@ -19,8 +19,8 @@ func (app *application) routes() *http.ServeMux {
 	mux.HandleFunc("/employees/createTable", app.createEmpTable)
 	
 	mux.HandleFunc("/employees/show", app.showAllEmpList)
-	//mux.HandleFunc("/employees/create", app.createEmp)
-	//mux.HandleFunc("/employees/update", app.updateEmp)
+	mux.HandleFunc("/employees/create", app.createEmp)
+	mux.HandleFunc("/employees/updateEmp", app.updateEmployee)
 
 	//Static Folder Path
 	fileServer := http.FileServer(http.Dir("./ui/static/")) 

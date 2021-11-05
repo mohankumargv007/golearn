@@ -8,7 +8,16 @@ import (
 	"alexedwards.net/snippetbox/pkg/models"
 	"log"
 	"alexedwards.net/snippetbox/pkg/models/mysql"
+	"encoding/json"
+	"database/sql"
 )
+
+type EmployeeModel struct {
+	DB *sql.DB
+}
+
+var db *sql.DB
+
 
 type application struct {
 	errorLog *log.Logger
@@ -108,43 +117,74 @@ func (app *application) createEmpTable(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) createEmp(w http.ResponseWriter, r *http.Request) {
+	//Check POST Method
 	if r.Method != http.MethodPost { 
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "Method Not Allowed", 405) 
 		return
 	}
-	
-	err := r.ParseForm() 
-	if err != nil {
-		app.clientError(w, http.StatusBadRequest)
-		return
-	}
 
-	//Working on it
-	print(r.PostForm["emp_id"])
-	return
+	//Get URL Params
+	query := r.URL.Query()
+
+    if len(query) == 0 {
+        fmt.Println("Please send params.")
+    }
 
 	//Call below one to insert data
-	id, err := app.employees.Insert(empID, empName, role)
+	_, err := app.employees.Insert(query["emp_id"][0], query["emp_name"][0], query["role"][0])
 	if err != nil {
+		w.WriteHeader(405)
+		w.Write([]byte(err.Error()))
 		app.serverError(w, err)
 		return
 	}
-	print(id);
+
+	//Success Response
 	w.WriteHeader(200)
 	w.Write([]byte("Created Employee Successfully."))
 	return
 }
 
-func (app *application) showAllEmpList(w http.ResponseWriter, r *http.Request) {
-	//Call below one to insert data
-	result, err := app.employees.show()
+func (app *application) updateEmployee(w http.ResponseWriter, r *http.Request) {
+	//Check POST Method
+	if r.Method != http.MethodPost { 
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "Method Not Allowed", 405) 
+		return
+	}
+
+	//Get URL Params
+	query := r.URL.Query()
+
+    if len(query) == 0 {
+		//Success Response
+		w.WriteHeader(204)
+		w.Write([]byte("No content found.Please share employee Id"))
+    }
+
+	//Call below one to update data
+	_, err := app.employees.Update(query["emp_id"][0], query["emp_name"][0], query["role"][0])
 	if err != nil {
 		w.WriteHeader(500)
 		app.serverError(w, err)
 		return
 	}
 	w.WriteHeader(200)
-	w.Write([]byte(result))
+	w.Write([]byte("Updated employee successfully."))
 	return
+}
+
+func (app *application) showAllEmpList(w http.ResponseWriter, r *http.Request) {
+	//Call below one to insert data
+	w.Header().Set("Content-Type", "application/json")
+	empId := 1
+	result, err := app.employees.Show(w, r, empId)
+	if err != nil {
+		w.WriteHeader(405)
+		w.Write([]byte(err.Error()))
+		app.serverError(w, err)
+		return
+	}
+	json.NewEncoder(w).Encode(result)
 }

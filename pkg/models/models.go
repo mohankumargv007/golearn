@@ -16,10 +16,10 @@ type Snippet struct {
 }
 
 type Employee struct {
-	ID int
-	EmpID string
-	EmpName string
-	Role string
-	Created time.Time
-	Updated time.Time
+	ID int `json:"id"`
+	EmpID string `json:"emp_id"`
+	EmpName string `json:"emp_name"`
+	Role string `json:"role"`
+	Created time.Time `json:"created"`
+	Updated time.Time `json:"updated"`
 }
