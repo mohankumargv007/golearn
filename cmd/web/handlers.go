@@ -8,8 +8,9 @@ import (
 	"alexedwards.net/snippetbox/pkg/models"
 	"log"
 	"alexedwards.net/snippetbox/pkg/models/mysql"
-	"encoding/json"
+	//"encoding/json"
 	"database/sql"
+	"github.com/golangcollege/sessions"
 )
 
 type EmployeeModel struct {
@@ -24,6 +25,8 @@ type application struct {
 	infoLog *log.Logger
 	snippets *mysql.SnippetModel
 	employees *mysql.EmployeeModel
+	session *sessions.Session
+	templateCache map[string]*template.Template
 }
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
@@ -195,11 +198,10 @@ func (app *application) updateEmployee(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (app *application) showAllEmpList(w http.ResponseWriter, r *http.Request) {
-	//Call below one to insert data
+/* func (app *application) showAllEmpList(w http.ResponseWriter, r *http.Request) {
+	//Call below one to show data
 	w.Header().Set("Content-Type", "application/json")
-	empId := 1
-	result, err := app.employees.Show(w, r, empId)
+	result, err := app.employees.Show()
 	if err != nil {
 		w.WriteHeader(405)
 		w.Write([]byte(err.Error()))
@@ -207,4 +209,22 @@ func (app *application) showAllEmpList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(result)
+}
+ */
+//New Functions For User
+
+func (app *application) signupUserForm(w http.ResponseWriter, r *http.Request) { 
+	fmt.Fprintln(w, "Display the user signup form...")
+}
+func (app *application) signupUser(w http.ResponseWriter, r *http.Request) { 
+	fmt.Fprintln(w, "Create a new user...")
+}
+func (app *application) loginUserForm(w http.ResponseWriter, r *http.Request) { 
+	fmt.Fprintln(w, "Display the user login form...")
+}
+func (app *application) loginUser(w http.ResponseWriter, r *http.Request) { 
+	fmt.Fprintln(w, "Authenticate and login the user...")
+}
+func (app *application) logoutUser(w http.ResponseWriter, r *http.Request) { 
+	fmt.Fprintln(w, "Logout the user...")
 }

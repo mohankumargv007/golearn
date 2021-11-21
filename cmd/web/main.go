@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"os"
 	"alexedwards.net/snippetbox/pkg/models/mysql" // New import 
-	_ "github.com/go-sql-driver/mysql"	
+	_ "github.com/go-sql-driver/mysql"
+	"crypto/tls"
 )
 
 func main() {
@@ -34,17 +35,23 @@ func main() {
 		snippets: &mysql.SnippetModel{DB: db},
 		employees: &mysql.EmployeeModel{DB: db},
 	}
+
+	tlsConfig := &tls.Config{
+		PreferServerCipherSuites: true,
+		CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256}, 
+	}
 	
 	//Routes
 	srv := &http.Server{ 
 		Addr: *addr,
 		ErrorLog: errorLog,
 		Handler: app.routes(), 
+		TLSConfig: tlsConfig,
 	}
 
 	//Listen Serve
-	infoLog.Printf("Starting server on %s", *addr) 
-	err = srv.ListenAndServe()
+	infoLog.Printf("Starting server on %s", *addr)
+	err = srv.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
 	errorLog.Fatal(err)
 }
 	

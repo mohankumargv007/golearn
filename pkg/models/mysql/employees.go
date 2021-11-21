@@ -7,7 +7,6 @@ import (
 	//"errors"
 	"net/http"
 	//"encoding/json"
-	//"fmt"
 )
 
 //Model Initialization
@@ -15,7 +14,6 @@ type EmployeeModel struct {
 	DB *sql.DB
 }
 
-var db *sql.DB
 var employees models.Employee
 
 //Create A Employee Table 
@@ -52,9 +50,10 @@ func (m *EmployeeModel) Update(empID, empName, Role string) (int, error) {
 	return 0, nil
 }
 
-func (m *EmployeeModel) Show(w http.ResponseWriter, r *http.Request, empId int) ([]models.Employee, error) {
+func (m *EmployeeModel) Show(w http.ResponseWriter, r *http.Request) ([]models.Employee, error) {
 	stmt := "SELECT * FROM employees"
-	result, err := db.Query(stmt)
+	result, err := m.DB.Query(stmt)
+	print(123)
 	if err != nil {
 		return nil, err
 	}
