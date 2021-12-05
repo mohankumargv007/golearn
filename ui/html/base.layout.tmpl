@@ -25,9 +25,6 @@
                 </div> 
             </nav>
             <main>
-                {{with .Flash}}
-                    <div class='flash '>{{.}}</div>
-                {{end}}
                 {{template "main" .}}
             </main>
             {{template "footer" .}}

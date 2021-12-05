@@ -11,7 +11,7 @@ import (
 func (app *application) routes() http.Handler {
 	//Route Initialization
 	mux := pat.New()
-	standardMiddleware := alice.New(app.recoverPanic, secureHeaders)
+	//standardMiddleware := alice.New(app.recoverPanic, secureHeaders)
 	dynamicMiddleware := alice.New(app.session.Enable)
 
 	//All Required Routes
@@ -35,10 +35,15 @@ func (app *application) routes() http.Handler {
 	mux.Post("/user/login", dynamicMiddleware.ThenFunc(app.loginUser))
 	mux.Post("/user/logout", dynamicMiddleware.ThenFunc(app.logoutUser))
 
+	//File Operation APIs
+	mux.Get("/file/check", dynamicMiddleware.ThenFunc(app.fileCheck))
+	mux.Get("/file/read", dynamicMiddleware.ThenFunc(app.readFile))
+	mux.Get("/file/rename", dynamicMiddleware.ThenFunc(app.renameFile))
+
 	//Static Folder Path
 	//fileServer := http.FileServer(http.Dir("./ui/static/"))
 	//	mux.Handle("/static/", http.StripPrefix("/static", fileServer))
 
-	//return mux
-	return standardMiddleware(mux)
+	return mux
+	//return standardMiddleware(mux)
 }

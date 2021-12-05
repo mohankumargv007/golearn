@@ -1,15 +1,21 @@
 package main
-import ( 
+
+import (
+	"errors"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"strconv"
-	"errors"
+
 	"alexedwards.net/snippetbox/pkg/models"
-	"log"
 	"alexedwards.net/snippetbox/pkg/models/mysql"
+
 	//"encoding/json"
 	"database/sql"
+
+	"os"
+
 	"github.com/golangcollege/sessions"
 )
 
@@ -19,13 +25,12 @@ type EmployeeModel struct {
 
 var db *sql.DB
 
-
 type application struct {
-	errorLog *log.Logger
-	infoLog *log.Logger
-	snippets *mysql.SnippetModel
-	employees *mysql.EmployeeModel
-	session *sessions.Session
+	errorLog      *log.Logger
+	infoLog       *log.Logger
+	snippets      *mysql.SnippetModel
+	employees     *mysql.EmployeeModel
+	session       *sessions.Session
 	templateCache map[string]*template.Template
 }
 
@@ -35,7 +40,7 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s, err := app.snippets.Latest() 
+	s, err := app.snippets.Latest()
 
 	if err != nil {
 		app.serverError(w, err)
@@ -48,7 +53,7 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		app.errorLog.Println(err.Error())
-		app.serverError(w, err) 
+		app.serverError(w, err)
 		return
 	}
 
@@ -68,22 +73,22 @@ func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 	s, err := app.snippets.Get(id)
 	if err != nil {
 		if errors.Is(err, models.ErrNoRecord) {
-			app.notFound(w) 
+			app.notFound(w)
 		} else {
-			app.serverError(w, err) 
+			app.serverError(w, err)
 		}
 		return
 	}
 
 	/* files := []string{
-		"./ui/html/show.page.tmpl", 
-		"./ui/html/base.layout.tmpl", 
+		"./ui/html/show.page.tmpl",
+		"./ui/html/base.layout.tmpl",
 		"./ui/html/footer.partial.tmpl",
 	} */
 
 	data := &templateData{Snippet: s}
 
-	ts, err := template.ParseFiles("./ui/html/show.page.tmpl", "./ui/html/base.layout.tmpl", "./ui/html/footer.partial.tmpl") 
+	ts, err := template.ParseFiles("./ui/html/show.page.tmpl", "./ui/html/base.layout.tmpl", "./ui/html/footer.partial.tmpl")
 	if err != nil {
 		app.serverError(w, err)
 		return
@@ -91,17 +96,17 @@ func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 
 	err = ts.Execute(w, data)
 	if err != nil {
-		app.serverError(w, err) 
+		app.serverError(w, err)
 	}
-		
+
 	// Write the snippet data as a plain-text HTTP response body.
 	fmt.Fprintf(w, "%v", s)
 }
 
 func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost { 
+	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "Method Not Allowed", 405) 
+		http.Error(w, "Method Not Allowed", 405)
 		return
 	}
 	title := "O snail"
@@ -117,15 +122,17 @@ func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte("Create a new snippet..."))
 
+	app.session.Put(r, "flash", "Snippet successfully created!")
+
 	//Redirecting to created snippet
-	http.Redirect(w, r, fmt.Sprintf("/snippet?id=%d", id), http.StatusSeeOther) 
+	http.Redirect(w, r, fmt.Sprintf("/snippet?id=%d", id), http.StatusSeeOther)
 }
 
 //Employee Methods
 func (app *application) createEmpTable(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost { 
+	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "Method Not Allowed", 405) 
+		http.Error(w, "Method Not Allowed", 405)
 		return
 	}
 
@@ -141,18 +148,18 @@ func (app *application) createEmpTable(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) createEmp(w http.ResponseWriter, r *http.Request) {
 	//Check POST Method
-	if r.Method != http.MethodPost { 
+	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "Method Not Allowed", 405) 
+		http.Error(w, "Method Not Allowed", 405)
 		return
 	}
 
 	//Get URL Params
 	query := r.URL.Query()
 
-    if len(query) == 0 {
-        fmt.Println("Please send params.")
-    }
+	if len(query) == 0 {
+		fmt.Println("Please send params.")
+	}
 
 	//Call below one to insert data
 	_, err := app.employees.Insert(query["emp_id"][0], query["emp_name"][0], query["role"][0])
@@ -171,20 +178,20 @@ func (app *application) createEmp(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) updateEmployee(w http.ResponseWriter, r *http.Request) {
 	//Check POST Method
-	if r.Method != http.MethodPost { 
+	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "Method Not Allowed", 405) 
+		http.Error(w, "Method Not Allowed", 405)
 		return
 	}
 
 	//Get URL Params
 	query := r.URL.Query()
 
-    if len(query) == 0 {
+	if len(query) == 0 {
 		//Success Response
 		w.WriteHeader(204)
 		w.Write([]byte("No content found.Please share employee Id"))
-    }
+	}
 
 	//Call below one to update data
 	_, err := app.employees.Update(query["emp_id"][0], query["emp_name"][0], query["role"][0])
@@ -210,21 +217,65 @@ func (app *application) updateEmployee(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(result)
 }
- */
+*/
 //New Functions For User
 
-func (app *application) signupUserForm(w http.ResponseWriter, r *http.Request) { 
+func (app *application) signupUserForm(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Display the user signup form...")
 }
-func (app *application) signupUser(w http.ResponseWriter, r *http.Request) { 
+func (app *application) signupUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Create a new user...")
 }
-func (app *application) loginUserForm(w http.ResponseWriter, r *http.Request) { 
+func (app *application) loginUserForm(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Display the user login form...")
 }
-func (app *application) loginUser(w http.ResponseWriter, r *http.Request) { 
+func (app *application) loginUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Authenticate and login the user...")
 }
-func (app *application) logoutUser(w http.ResponseWriter, r *http.Request) { 
+func (app *application) logoutUser(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Logout the user...")
+}
+
+///File Operations
+
+//1.File Check
+func (app *application) fileCheck(w http.ResponseWriter, r *http.Request) {
+	if _, err := os.Stat("ui/static/csv/cities.txt"); err == nil {
+		w.Write([]byte("File exists."))
+	} else {
+		w.Write([]byte("File not exists."))
+	}
+}
+
+//2.Read File
+func (app *application) readFile(w http.ResponseWriter, r *http.Request) {
+	file, err := os.Create("ui/static/csv/cities.txt")
+	if err != nil {
+		w.Write([]byte("File Creation Failed.Please Try After Some Time."))
+		return
+	}
+	defer file.Close()
+
+	var cities = []string{
+		"Hyd",
+		"Bangalore",
+		"Mumbai",
+	}
+	for i := 0; i < len(cities); i++ {
+		file.WriteString(cities[i])
+		file.WriteString("\n")
+	}
+	w.Write([]byte("Cities File Created Successfully."))
+}
+
+//3.Renaming the file
+func (app *application) renameFile(w http.ResponseWriter, r *http.Request) {
+	currentFile := "ui/static/csv/cities.txt"
+	newName := "ui/static/csv/new_cities.txt"
+	e := os.Rename(currentFile, newName)
+	if e != nil {
+		fmt.Fprintln(w, e)
+		return
+	}
+	w.Write([]byte("File Renamed Successfully."))
 }
