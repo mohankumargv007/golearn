@@ -14,6 +14,10 @@ import (
 	"github.com/golangcollege/sessions"
 )
 
+type contextKey string
+
+const contextKeyIsAuthenticated = contextKey("isAuthenticated")
+
 func main() {
 	dsn := flag.String("dsn", "web:pass@/snippetbox?parseTime=true", "MySQL data source name")
 	addr := flag.String("addr", ":4000", "HTTP network address")
@@ -23,6 +27,7 @@ func main() {
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	secret := flag.String("secret", "s6Ndh+pPbnzHbS*+9Pk8qGWhTzbpa@ge", "Secret key")
 
+	templateCache, err := newTemplateCache("./ui/html/")
 	//Open Connection
 	db, err := openDB(*dsn)
 
@@ -36,13 +41,18 @@ func main() {
 	//Session
 	session := sessions.New([]byte(*secret))
 	session.Lifetime = 12 * time.Hour
+	session.Secure = true
+	session.SameSite = http.SameSiteStrictMode
 
 	//Snippet Model initialize
 	app := &application{
-		errorLog: errorLog,
-		infoLog:  infoLog,
-		snippets: &mysql.SnippetModel{DB: db},
-		session:  session,
+		errorLog:      errorLog,
+		infoLog:       infoLog,
+		snippets:      &mysql.SnippetModel{DB: db},
+		session:       session,
+		users:         &mysql.UserModel{DB: db},
+		employees:     &mysql.EmployeeModel{DB: db},
+		templateCache: templateCache,
 	}
 
 	tlsConfig := &tls.Config{

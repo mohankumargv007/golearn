@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"alexedwards.net/snippetbox/pkg/forms"
 	"alexedwards.net/snippetbox/pkg/models"
 	"alexedwards.net/snippetbox/pkg/models/mysql"
 
@@ -32,6 +33,7 @@ type application struct {
 	employees     *mysql.EmployeeModel
 	session       *sessions.Session
 	templateCache map[string]*template.Template
+	users         *mysql.UserModel
 }
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
@@ -40,14 +42,17 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s, err := app.snippets.Latest()
+	//s, err := app.snippets.Latest()
+
+	s, err := app.employees.Latest()
 
 	if err != nil {
 		app.serverError(w, err)
 		return
 	}
 
-	data := &templateData{Snippets: s}
+	//data := &templateData{Snippets: s}
+	data := &templateData{Employees: s}
 
 	ts, err := template.ParseFiles("./ui/html/home.page.tmpl", "./ui/html/base.layout.tmpl", "./ui/html/footer.partial.tmpl")
 
@@ -64,10 +69,16 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (app *application) employeeDashboard(w http.ResponseWriter, r *http.Request) {
+	app.render(w, r, "empdashboard.page.tmpl", &templateData{
+		Form: forms.New(nil),
+	})
+}
+
 func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil || id < 1 {
-		http.NotFound(w, r)
+		app.notFound(w)
 		return
 	}
 	s, err := app.snippets.Get(id)
@@ -80,38 +91,32 @@ func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/* files := []string{
-		"./ui/html/show.page.tmpl",
-		"./ui/html/base.layout.tmpl",
-		"./ui/html/footer.partial.tmpl",
-	} */
+	flash := app.session.PopString(r, "flash")
 
-	data := &templateData{Snippet: s}
+	app.render(w, r, "show.page.tmpl", &templateData{
+		Flash:   flash,
+		Snippet: s,
+	})
+}
 
-	ts, err := template.ParseFiles("./ui/html/show.page.tmpl", "./ui/html/base.layout.tmpl", "./ui/html/footer.partial.tmpl")
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
-
-	err = ts.Execute(w, data)
-	if err != nil {
-		app.serverError(w, err)
-	}
-
-	// Write the snippet data as a plain-text HTTP response body.
-	fmt.Fprintf(w, "%v", s)
+func (app *application) createSnippetForm(w http.ResponseWriter, r *http.Request) {
+	app.render(w, r, "create.page.tmpl", &templateData{
+		Form: forms.New(nil),
+	})
 }
 
 func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "Method Not Allowed", 405)
+	err := r.ParseForm()
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
 		return
 	}
-	title := "O snail"
-	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n– Kobayashi Issa"
-	expires := "7"
+
+	title := r.PostForm.Get("title")
+	content := r.PostForm.Get("content")
+	expires := r.PostForm.Get("expires")
+
+	w.Write([]byte(title))
 
 	///Call below one to insert data
 	id, err := app.snippets.Insert(title, content, expires)
@@ -126,6 +131,34 @@ func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
 
 	//Redirecting to created snippet
 	http.Redirect(w, r, fmt.Sprintf("/snippet?id=%d", id), http.StatusSeeOther)
+}
+
+func (app *application) createEmp(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	emp_id := r.PostForm.Get("emp_id")
+	emp_name := r.PostForm.Get("emp_name")
+	role := r.PostForm.Get("role")
+
+	w.Write([]byte(emp_id))
+
+	///Call below one to insert data
+	id, err := app.employees.Insert(emp_id, emp_name, role)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	w.Write([]byte("Create a new emp..."))
+
+	app.session.Put(r, "flash", "Emp successfully created!")
+
+	//Redirecting to created snippet
+	http.Redirect(w, r, fmt.Sprintf("/employee?id=%d", id), http.StatusSeeOther)
 }
 
 //Employee Methods
@@ -143,36 +176,6 @@ func (app *application) createEmpTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	print(id)
-	return
-}
-
-func (app *application) createEmp(w http.ResponseWriter, r *http.Request) {
-	//Check POST Method
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "Method Not Allowed", 405)
-		return
-	}
-
-	//Get URL Params
-	query := r.URL.Query()
-
-	if len(query) == 0 {
-		fmt.Println("Please send params.")
-	}
-
-	//Call below one to insert data
-	_, err := app.employees.Insert(query["emp_id"][0], query["emp_name"][0], query["role"][0])
-	if err != nil {
-		w.WriteHeader(405)
-		w.Write([]byte(err.Error()))
-		app.serverError(w, err)
-		return
-	}
-
-	//Success Response
-	w.WriteHeader(200)
-	w.Write([]byte("Created Employee Successfully."))
 	return
 }
 
@@ -221,19 +224,68 @@ func (app *application) updateEmployee(w http.ResponseWriter, r *http.Request) {
 //New Functions For User
 
 func (app *application) signupUserForm(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Display the user signup form...")
+	app.render(w, r, "signup.page.tmpl", &templateData{
+		Form: forms.New(nil),
+	})
 }
 func (app *application) signupUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Create a new user...")
+	err := r.ParseForm()
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+	// Validate the form contents using the form helper we made earlier.
+	form := forms.New(r.PostForm)
+	form.Required("name", "email", "password")
+	form.MaxLength("name", 255)
+	form.MaxLength("email", 255)
+	form.MatchesPattern("email", forms.EmailRX)
+	form.MinLength("password", 10)
+	err = app.users.Insert(form.Get("name"), form.Get("email"), form.Get("password"))
+	if err != nil {
+		if errors.Is(err, models.ErrDuplicateEmail) {
+			form.Errors.Add("email", "Address is already in use")
+			app.render(w, r, "signup.page.tmpl", &templateData{Form: form})
+		} else {
+			app.serverError(w, err)
+		}
+		return
+	}
+	app.session.Put(r, "flash", "Your signup was successful. Please log in.")
+
+	http.Redirect(w, r, "/user/login", http.StatusSeeOther)
 }
 func (app *application) loginUserForm(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Display the user login form...")
+	app.render(w, r, "login.page.tmpl", &templateData{
+		Form: forms.New(nil),
+	})
 }
 func (app *application) loginUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Authenticate and login the user...")
+	err := r.ParseForm()
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	form := forms.New(r.PostForm)
+	id, err := app.users.Authenticate(form.Get("email"), form.Get("password"))
+	if err != nil {
+		if errors.Is(err, models.ErrInvalidCredentials) {
+			form.Errors.Add("generic", "Email or Password is incorrect")
+			app.render(w, r, "login.page.tmpl", &templateData{Form: form})
+		} else {
+			app.serverError(w, err)
+		}
+		return
+	}
+	app.session.Put(r, "authenticatedUserID", id)
+	http.Redirect(w, r, "/snippet/create", http.StatusSeeOther)
 }
+
 func (app *application) logoutUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Logout the user...")
+	app.session.Remove(r, "authenticatedUserID")
+	app.session.Put(r, "flash", "You've been logged out successfully!")
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 ///File Operations

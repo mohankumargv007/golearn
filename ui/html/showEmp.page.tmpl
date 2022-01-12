@@ -1,0 +1,25 @@
+{{template "base" .}}
+    {{define "title"}}Home{{end}}
+    {{define "main"}}
+        <h2>List Of All Employees</h2> 
+        {{if .Snippets}}
+            <table> 
+                <tr>
+                    <th>Emp Name</th>
+                    <th>Emp Id</th>
+                    <th>Emp Role</th>
+                    <th># Action</th>
+                </tr>
+                {{range .Employees}} 
+                <tr>
+                    <td><a href='/employee/show?id={{.ID}}'>{{.EmpID}}</a></td> 
+                    <td>{{.EmpName}}</td>
+                    <td>#{{.Role}}</td>
+                    <td><a href='/employee/edit?id={{.ID}}'>{{.EmpID}}</a></td> 
+                </tr>
+                {{end}} 
+            </table>
+        {{else}}
+            <p>There's nothing to see here... yet!</p>
+        {{end}} 
+    {{end}}

@@ -2,8 +2,9 @@ package mysql
 
 import (
 	"database/sql"
-	"alexedwards.net/snippetbox/pkg/models"
 	"errors"
+
+	"alexedwards.net/snippetbox/pkg/models"
 )
 
 type SnippetModel struct {
@@ -13,30 +14,30 @@ type SnippetModel struct {
 //Inserting Data Into Snippet Model
 func (m *SnippetModel) Insert(title, content, expires string) (int, error) {
 	//MySql Statement
-	stmt := `INSERT INTO snippets (title, content, created, expires) VALUES(?, ?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY))` 
+	stmt := `INSERT INTO snippets (title, content, created, expires) VALUES(?, ?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY))`
 	result, err := m.DB.Exec(stmt, title, content, expires)
 	if err != nil {
-		return 0, err 
+		return 0, err
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, err
 	}
-	print(id);
+	print(id)
 	return 0, nil
 }
 
 //get Data Into Snippet Model
-func (m *SnippetModel) Get(id int) (*models.Snippet, error) { 
+func (m *SnippetModel) Get(id int) (*models.Snippet, error) {
 	stmt := `SELECT id, title, content, created, expires FROM snippets WHERE expires > UTC_TIMESTAMP() AND id = ?`
-	row := m.DB.QueryRow(stmt, id)
+	//row := m.DB.QueryRow(stmt, id)
 	s := &models.Snippet{}
 
-	err := row.Scan(&s.ID, &s.Title, &s.Content, &s.Created, &s.Expires)
+	err := m.DB.QueryRow(stmt, id).Scan(&s.ID, &s.Title, &s.Content, &s.Created, &s.Expires)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, models.ErrNoRecord 
+			return nil, models.ErrNoRecord
 		} else {
 			return nil, err
 		}
@@ -51,7 +52,7 @@ func (m *SnippetModel) Latest() ([]*models.Snippet, error) {
 
 	rows, err := m.DB.Query(stmt)
 	if err != nil {
-		return nil, err 
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -61,11 +62,11 @@ func (m *SnippetModel) Latest() ([]*models.Snippet, error) {
 		s := &models.Snippet{}
 		err = rows.Scan(&s.ID, &s.Title, &s.Content, &s.Created, &s.Expires)
 		if err != nil {
-			return nil, err 
+			return nil, err
 		}
-		snippets = append(snippets, s) 
+		snippets = append(snippets, s)
 	}
-	if err = rows.Err(); err != nil { 
+	if err = rows.Err(); err != nil {
 		return nil, err
 	}
 
